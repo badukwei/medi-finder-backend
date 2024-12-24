@@ -1,0 +1,98 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model City {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId 
+  cityName    String?
+  country     String?
+  generalRating Float?
+  overview    String?
+  description String?
+  cityImageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  hospitals      Hospital[]
+  emergencyInfo  EmergencyInfo?
+  commonIllnesses CommonIllness[]
+  vaccines       Vaccine[]
+  insuranceInfo  InsuranceInfo?
+  healthRatings  HealthRating?
+}
+
+model Hospital {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  cityId       String @db.ObjectId 
+  name         String
+  address      String
+  contact      String
+  open24Hours  Boolean
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  city         City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+}
+
+model EmergencyInfo {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  cityId       String @db.ObjectId @unique
+  emergencyPhone String
+  ambulanceService AmbulanceService?
+  city         City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+}
+
+model AmbulanceService {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  emergencyInfoId String @db.ObjectId @unique
+  available    Boolean
+  lowestFees   Int
+  highestFees  Int
+  responseTime String
+  emergencyInfo EmergencyInfo @relation(fields: [emergencyInfoId], references: [id], onDelete: Cascade)
+}
+
+model CommonIllness {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  cityId       String @db.ObjectId
+  illness      String
+  city         City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+}
+
+model Vaccine {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  cityId       String @db.ObjectId
+  vaccine      String
+  importance   Float
+  city         City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+}
+
+model InsuranceInfo {
+  id                       String @id @default(auto()) @map("_id") @db.ObjectId
+  cityId                   String @db.ObjectId @unique
+  internationalAccepted    Boolean
+  travelInsuranceRecommended Boolean
+  city                     City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+}
+
+model HealthRating {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  cityId       String @db.ObjectId @unique
+  languageSupport Float
+  waterSafety  Float
+  foodSafety   Float
+  healthRisk   Float
+  airQuality   Float
+  city         City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+}
