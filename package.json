@@ -5,7 +5,8 @@
 	"private": true,
 	"scripts": {
 		"start": "node dist/index.js",
-		"dev": "nodemon"
+		"dev": "nodemon",
+		"clean:generalRatings": "ts-node scripts/cleanGeneralRatings.ts"
 	},
 	"dependencies": {
 		"@prisma/client": "^6.1.0",

@@ -14,85 +14,94 @@ datasource db {
 }
 
 model City {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId 
-  cityName    String?
-  country     String?
-  generalRating Float?
-  overview    String?
-  description String?
-  cityImageUrl    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  hospitals      Hospital[]
-  emergencyInfo  EmergencyInfo?
-  commonIllnesses CommonIllness[]
-  vaccines       Vaccine[]
-  insuranceInfo  InsuranceInfo?
-  healthRatings  HealthRating?
-}
-
-model Hospital {
-  id           String @id @default(auto()) @map("_id") @db.ObjectId
-  cityId       String @db.ObjectId 
-  name         String
-  address      String
-  contact      String
-  open24Hours  Boolean
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  cityName     String?
+  country      String?
+  overview     String?
+  description  String?
+  cityImageUrl String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  city         City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  generalRatings  GeneralRating[]
+  hospitals       Hospital[]
+  emergencyInfo   EmergencyInfo?
+  commonIllnesses CommonIllness[]
+  vaccines        Vaccine[]
+  insuranceInfo   InsuranceInfo?
+  healthRatings   HealthRating[]
+}
+
+model GeneralRating {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  cityId    String   @db.ObjectId
+  rating    Float    @default(0.0)
+  createdAt DateTime @default(now())
+
+  city City @relation(fields: [cityId], references: [id], onDelete: Cascade)
+}
+
+model Hospital {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  cityId      String   @db.ObjectId
+  name        String
+  address     String
+  contact     String
+  open24Hours Boolean
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  city City @relation(fields: [cityId], references: [id], onDelete: Cascade)
 }
 
 model EmergencyInfo {
-  id           String @id @default(auto()) @map("_id") @db.ObjectId
-  cityId       String @db.ObjectId @unique
-  emergencyPhone String
+  id               String            @id @default(auto()) @map("_id") @db.ObjectId
+  cityId           String            @unique @db.ObjectId
+  emergencyPhone   String
   ambulanceService AmbulanceService?
-  city         City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  city             City              @relation(fields: [cityId], references: [id], onDelete: Cascade)
 }
 
 model AmbulanceService {
-  id           String @id @default(auto()) @map("_id") @db.ObjectId
-  emergencyInfoId String @db.ObjectId @unique
-  available    Boolean
-  lowestFees   Int
-  highestFees  Int
-  responseTime String
-  emergencyInfo EmergencyInfo @relation(fields: [emergencyInfoId], references: [id], onDelete: Cascade)
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  emergencyInfoId String        @unique @db.ObjectId
+  available       Boolean
+  lowestFees      Int
+  highestFees     Int
+  responseTime    String
+  emergencyInfo   EmergencyInfo @relation(fields: [emergencyInfoId], references: [id], onDelete: Cascade)
 }
 
 model CommonIllness {
-  id           String @id @default(auto()) @map("_id") @db.ObjectId
-  cityId       String @db.ObjectId
-  illness      String
-  city         City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  cityId  String @db.ObjectId
+  illness String
+  city    City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
 }
 
 model Vaccine {
-  id           String @id @default(auto()) @map("_id") @db.ObjectId
-  cityId       String @db.ObjectId
-  vaccine      String
-  importance   Float
-  city         City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  cityId     String @db.ObjectId
+  vaccine    String
+  importance Float
+  city       City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
 }
 
 model InsuranceInfo {
-  id                       String @id @default(auto()) @map("_id") @db.ObjectId
-  cityId                   String @db.ObjectId @unique
-  internationalAccepted    Boolean
+  id                         String  @id @default(auto()) @map("_id") @db.ObjectId
+  cityId                     String  @unique @db.ObjectId
+  internationalAccepted      Boolean
   travelInsuranceRecommended Boolean
-  city                     City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  city                       City    @relation(fields: [cityId], references: [id], onDelete: Cascade)
 }
 
 model HealthRating {
-  id           String @id @default(auto()) @map("_id") @db.ObjectId
-  cityId       String @db.ObjectId @unique
-  languageSupport Float
-  waterSafety  Float
-  foodSafety   Float
-  healthRisk   Float
-  airQuality   Float
-  city         City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  cityId          String @db.ObjectId
+  languageSupport Float  @default(0.0)
+  waterSafety     Float  @default(0.0)
+  foodSafety      Float  @default(0.0)
+  healthRisk      Float  @default(0.0)
+  airQuality      Float  @default(0.0)
+  city            City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
 }

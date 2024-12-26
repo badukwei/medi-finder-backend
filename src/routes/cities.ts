@@ -1,18 +1,18 @@
 import { Router } from "express";
 import prisma from "../prisma";
-import multer from "multer";
-import axios from "axios";
-import dotenv from "dotenv";
 
-const IMGUR_CLIENT_ID = process.env.IMGUR_CLIENT_ID;
-const upload = multer({ storage: multer.memoryStorage() });
 const router = Router();
 
-router.get("/get", async (req, res) => {
+router.get("/getAll", async (req, res) => {
 	try {
 		const cities = await prisma.city.findMany({
 			include: {
 				hospitals: true,
+				generalRatings: {
+					select: {
+						rating: true,
+					},
+				},
 				emergencyInfo: {
 					include: {
 						ambulanceService: true,
@@ -21,130 +21,148 @@ router.get("/get", async (req, res) => {
 				commonIllnesses: true,
 				vaccines: true,
 				insuranceInfo: true,
-				healthRatings: true,
+				healthRatings: {
+					select: {
+						languageSupport: true,
+						waterSafety: true,
+						foodSafety: true,
+						healthRisk: true,
+						airQuality: true,
+					},
+				},
 			},
 		});
-		res.status(200).json(cities);
+
+		const enrichedCities = cities.map((city) => {
+			const totalGeneralRatings = city.generalRatings.length;
+			const averageGeneralRating = totalGeneralRatings
+				? city.generalRatings.reduce(
+						(sum, { rating }) => sum + rating,
+						0
+				  ) / totalGeneralRatings
+				: 0;
+
+			const totalHealthRatings = city.healthRatings.length;
+			const averageHealthRatings = totalHealthRatings
+				? city.healthRatings.reduce(
+						(sums, rating) => ({
+							languageSupport:
+								sums.languageSupport + rating.languageSupport,
+							waterSafety: sums.waterSafety + rating.waterSafety,
+							foodSafety: sums.foodSafety + rating.foodSafety,
+							healthRisk: sums.healthRisk + rating.healthRisk,
+							airQuality: sums.airQuality + rating.airQuality,
+						}),
+						{
+							languageSupport: 0,
+							waterSafety: 0,
+							foodSafety: 0,
+							healthRisk: 0,
+							airQuality: 0,
+						}
+				  )
+				: {
+						languageSupport: 0,
+						waterSafety: 0,
+						foodSafety: 0,
+						healthRisk: 0,
+						airQuality: 0,
+				  };
+
+			const normalizedHealthRatings = totalHealthRatings
+				? {
+						languageSupport: parseFloat(
+							(
+								averageHealthRatings.languageSupport /
+								totalHealthRatings
+							).toFixed(2)
+						),
+						waterSafety: parseFloat(
+							(
+								averageHealthRatings.waterSafety /
+								totalHealthRatings
+							).toFixed(2)
+						),
+						foodSafety: parseFloat(
+							(
+								averageHealthRatings.foodSafety /
+								totalHealthRatings
+							).toFixed(2)
+						),
+						healthRisk: parseFloat(
+							(
+								averageHealthRatings.healthRisk /
+								totalHealthRatings
+							).toFixed(2)
+						),
+						airQuality: parseFloat(
+							(
+								averageHealthRatings.airQuality /
+								totalHealthRatings
+							).toFixed(2)
+						),
+				  }
+				: {
+						languageSupport: 0,
+						waterSafety: 0,
+						foodSafety: 0,
+						healthRisk: 0,
+						airQuality: 0,
+				  };
+
+			return {
+				...city,
+				averageGeneralRating: parseFloat(
+					averageGeneralRating.toFixed(2)
+				), 
+				averageHealthRating: normalizedHealthRatings,
+			};
+		});
+
+		res.status(200).json(enrichedCities);
 	} catch (error) {
-		console.error(error);
+		console.error("Failed to fetch cities:", error);
 		res.status(500).json({ error: "Failed to fetch cities" });
 	}
 });
 
-router.post("/create", async (req, res) => {
-	const {
-		cityName,
-		country,
-		generalRating,
-		overview,
-		description,
-		hospitals,
-		emergencyInfo,
-		commonIllnesses,
-		vaccines,
-		insuranceInfo,
-		healthRatings,
-	} = req.body;
-
+router.get("/getOverview", async (req, res) => {
 	try {
-		const city = await prisma.city.create({
-			data: {
-				cityName,
-				country,
-				generalRating,
-				overview,
-				description,
-				hospitals: {
-					create: hospitals,
-				},
-				emergencyInfo: {
-					create: {
-						emergencyPhone: emergencyInfo.emergencyPhone,
-						ambulanceService: {
-							create: {
-								available:
-									emergencyInfo.ambulanceService.available,
-								lowestFees:
-									emergencyInfo.ambulanceService.lowestFees,
-								highestFees:
-									emergencyInfo.ambulanceService.highestFees,
-								responseTime:
-									emergencyInfo.ambulanceService.responseTime,
-							},
-						},
+		const cities = await prisma.city.findMany({
+			select: {
+				id: true,
+				cityName: true,
+				country: true,
+				overview: true,
+				cityImageUrl: true,
+				generalRatings: {
+					select: {
+						rating: true,
 					},
 				},
-				commonIllnesses: {
-					create: commonIllnesses.map((illness: string) => ({
-						illness,
-					})),
-				},
-				vaccines: {
-					create: vaccines,
-				},
-				insuranceInfo: {
-					create: insuranceInfo,
-				},
-				healthRatings: {
-					create: healthRatings,
-				},
 			},
 		});
-		res.status(201).json(city);
+
+		const enrichedCities = cities.map((city) => {
+			const totalRatings = city.generalRatings.length;
+			const averageRating = totalRatings
+				? city.generalRatings.reduce(
+						(sum, { rating }) => sum + rating,
+						0
+				  ) / totalRatings
+				: 0;
+
+			return {
+				...city,
+				averageGeneralRating: parseFloat(averageRating.toFixed(2)), // Add averageRatings field
+			};
+		});
+
+		res.status(200).json(enrichedCities);
 	} catch (error) {
-		console.error(error);
-		res.status(500).json({ error: "Failed to create city" });
+		console.error("Failed to fetch basic city info:", error);
+		res.status(500).json({ error: "Failed to fetch basic cities info" });
 	}
 });
-
-router.post("/upload", upload.single("image"), async (req, res) => {
-	if (!req.file) {
-		res.status(400).json({ error: "No file uploaded" });
-		return;
-	}
-
-	const { cityId } = req.body;
-	if (!cityId) {
-		res.status(400).json({ error: "City ID is required" });
-		return;
-	}
-
-	try {
-		const imageBase64 = req.file.buffer.toString("base64");
-
-		const response = await axios.post(
-			"https://api.imgur.com/3/image",
-			{
-				image: imageBase64,
-				type: "base64",
-			},
-			{
-				headers: {
-					Authorization: `Client-ID ${IMGUR_CLIENT_ID}`,
-				},
-			}
-		);
-
-		const imageUrl = response.data.data.link;
-
-		const updatedCity = await prisma.city.update({
-			where: { id: cityId },
-			data: { cityImageUrl: imageUrl },
-		});
-
-		res.status(200).json({
-			success: true,
-			message: "Image uploaded and URL added to the database",
-			url: imageUrl,
-			city: updatedCity,
-		});
-	} catch (error) {
-		console.error(error);
-		res.status(500).json({
-			error: "Failed to upload image or update city",
-		});
-	}
-});
-
 
 export default router;
